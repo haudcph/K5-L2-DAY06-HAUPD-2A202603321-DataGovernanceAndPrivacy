@@ -1,0 +1,2 @@
+ts,scope,status,canonical,reason_code,reason,owner,evidence
+2026-11-14T08:58:13+00:00,t02,GO,GO,QC_TRIAGE_COMPLIANT,"Đã phân loại thành công 96 ảnh: 41 ảnh nghi lỗi RECAPTURE, còn lại KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv

@@ -1,0 +1,14 @@
+{
+  "status": "GO",
+  "reason_code": "QC_TRIAGE_COMPLIANT",
+  "reason": "Đã phân loại thành công 96 ảnh: 41 ảnh nghi lỗi RECAPTURE, còn lại KEEP.",
+  "owner": "Pham Duc Hau (lead)",
+  "scope": "t02",
+  "evidence": [
+    "out/poc/ranked_review.csv",
+    "out/poc/review_queue.csv"
+  ],
+  "metrics": {},
+  "ts": "2026-11-14T08:58:13+00:00",
+  "canonical": "GO"
+}
