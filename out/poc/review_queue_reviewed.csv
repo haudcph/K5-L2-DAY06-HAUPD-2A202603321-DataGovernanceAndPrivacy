@@ -1,0 +1,21 @@
+rank,item_id,score,reason,suggested_action,slice,evidence_path,reviewer,reviewer_decision,override_value,review_note,reviewed_at
+1,img_17_2,43.560345,glare (score=43.560),RECAPTURE,day,images/img_17_2.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+2,img_05_3,2.046125,glare (score=2.046),RECAPTURE,day,images/img_05_3.jpg,Nguyễn Tuấn Dũng,edit,,độ glare thấp,2026-11-14T10:04:18.942Z
+3,img_13_3,0.992714,blur (score=0.993),RECAPTURE,night,images/img_13_3.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+4,img_15_2,0.981057,blur (score=0.981),RECAPTURE,dusk,images/img_15_2.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+5,img_19_3,0.980652,blur (score=0.981),RECAPTURE,day,images/img_19_3.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+6,img_16_2,0.979122,blur (score=0.979),RECAPTURE,day,images/img_16_2.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+7,img_06_2,0.920125,compression (score=0.920),RECAPTURE,night,images/img_06_2.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+8,img_15_3,0.854898,blur (score=0.855),RECAPTURE,dusk,images/img_15_3.jpg,Nguyễn Tuấn Dũng,reject,,Dark,2026-11-14T10:04:18.942Z
+9,img_17_3,0.809854,blur (score=0.810),RECAPTURE,day,images/img_17_3.jpg,Nguyễn Tuấn Dũng,reject,,Dark,2026-11-14T10:04:18.942Z
+10,img_23_3,0.803172,blur (score=0.803),RECAPTURE,day,images/img_23_3.jpg,Nguyễn Tuấn Dũng,reject,,dark,2026-11-14T10:04:18.942Z
+11,img_05_2,0.597872,compression (score=0.598),RECAPTURE,day,images/img_05_2.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+12,img_01_3,0.567652,compression (score=0.568),RECAPTURE,night,images/img_01_3.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+13,img_01_2,0.538458,dark (score=0.538),RECAPTURE,night,images/img_01_2.jpg,Nguyễn Tuấn Dũng,reject,,Dark,2026-11-14T10:04:18.942Z
+14,img_23_2,0.533838,compression (score=0.534),RECAPTURE,day,images/img_23_2.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+15,img_13_2,0.131055,clean,KEEP,night,images/img_13_2.jpg,Nguyễn Tuấn Dũng,reject,,compression,2026-11-14T10:04:18.942Z
+16,img_03_3,0.000177,clean,KEEP,night,images/img_03_3.jpg,Nguyễn Tuấn Dũng,reject,,img_03_3,2026-11-14T10:04:18.942Z
+17,img_19_2,0.000168,clean,KEEP,day,images/img_19_2.jpg,Nguyễn Tuấn Dũng,reject,,compression,2026-11-14T10:04:18.942Z
+18,img_17_1,0.000166,clean,KEEP,day,images/img_17_1.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+19,img_17_0,0.000146,clean,KEEP,day,images/img_17_0.jpg,Nguyễn Tuấn Dũng,approve,,,2026-11-14T10:04:18.942Z
+20,img_16_3,0.000144,clean,KEEP,day,images/img_16_3.jpg,Nguyễn Tuấn Dũng,reject,,compression,2026-11-14T10:04:18.942Z

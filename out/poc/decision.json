@@ -1,14 +1,22 @@
 {
   "status": "GO",
-  "reason_code": "QC_TRIAGE_COMPLIANT",
-  "reason": "Đã phân loại thành công 96 ảnh: 41 ảnh nghi lỗi RECAPTURE, còn lại KEEP.",
+  "reason_code": "QC_TRIAGE_VERIFIED",
+  "reason": "Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 34 RECAPTURE, 62 KEEP.",
   "owner": "Pham Duc Hau (lead)",
   "scope": "t02",
   "evidence": [
     "out/poc/ranked_review.csv",
-    "out/poc/review_queue.csv"
+    "out/poc/review_queue.csv",
+    "out/poc/audit_log.jsonl"
   ],
-  "metrics": {},
-  "ts": "2026-11-14T08:58:13+00:00",
+  "metrics": {
+    "n_total_images": 96,
+    "n_recapture": 34,
+    "n_keep": 62,
+    "review_budget": 20,
+    "n_reviewed_by_human": 20,
+    "review_completion_rate": 1.0
+  },
+  "ts": "2026-11-14T10:36:28+00:00",
   "canonical": "GO"
 }
