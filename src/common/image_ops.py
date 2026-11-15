@@ -14,7 +14,6 @@ from scipy.ndimage import convolve
 
 _LAPLACE = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=np.float32)
 
-
 def load_rgb(path: str | Path) -> np.ndarray:
     """HxWx3 uint8."""
     return np.asarray(Image.open(path).convert("RGB"))
