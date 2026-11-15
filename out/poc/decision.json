@@ -1,7 +1,7 @@
 {
   "status": "GO",
   "reason_code": "QC_TRIAGE_VERIFIED",
-  "reason": "Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 34 RECAPTURE, 62 KEEP.",
+  "reason": "Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 67 RECAPTURE, 29 KEEP.",
   "owner": "Pham Duc Hau (lead)",
   "scope": "t02",
   "evidence": [
@@ -11,12 +11,14 @@
   ],
   "metrics": {
     "n_total_images": 96,
-    "n_recapture": 34,
-    "n_keep": 62,
+    "n_recapture": 67,
+    "n_keep": 29,
+    "n_auto_keep": 24,
+    "n_auto_recapture": 22,
     "review_budget": 20,
     "n_reviewed_by_human": 20,
     "review_completion_rate": 1.0
   },
-  "ts": "2026-11-14T10:36:28+00:00",
+  "ts": "2026-11-15T02:58:18+00:00",
   "canonical": "GO"
 }

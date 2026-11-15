@@ -8,8 +8,8 @@
   "output": "out/poc",
   "pipeline": "src.pipeline",
   "config_hash": "7cb98a219395",
-  "git_sha": "7c9ccf2",
-  "runtime_seconds": 0.9004,
+  "git_sha": "252e078",
+  "runtime_seconds": 0.6308,
   "stats": {
     "n_items": 96,
     "n_reviewed": 20

@@ -1,12 +1,11 @@
-"""YOUR PoC PIPELINE — Track T02: Raw QC Triage (Production-Grade PoC)
+"""YOUR PoC PIPELINE — Track T02: Raw QC Triage (RAM-QC: ROI-Adaptive Multi-Feature QC)
 
-Upgrades:
-1. Camera-normalized Blur (cam_A vs cam_B thresholds calibrated on DEV)
-2. 2D Blockiness for Compression (requires both H and V grid discontinuity to eliminate texture false alarms)
-3. Local Glare detection with Bounding Box overlays on Contact Sheet
-4. Continuous scoring with tie-breaking (no clipping ties at 1.0 or 0.0)
-5. Eval-focused Review Queue (100% of budget B=20 spent on the eval split)
-6. Dynamic Risk Gate in decide(): HOLD when unreviewed, GO with full metrics once reviewed
+Architecture upgrades addressing presentation feedback:
+1. 3-Tier Triage Architecture: auto-KEEP (clean), REVIEW (uncertainty top-B), auto-RECAPTURE (severe corruption).
+2. Multi-defect scoring: score = max(s_i) + 0.05 * sum(others) + micro_tie_breaker.
+3. Rigorous Normalization per (camera_id, light) using DEV medians/IQR.
+4. Spatial ROI Prior for Glare: 1.85x weight on road/corridor corridor, 0.35x on sky/canopy.
+5. 2D Blockiness gradient: min(Block_H, Block_V) > 1.8 * base to eliminate 1D texture false alarms.
 """
 from __future__ import annotations
 
@@ -28,10 +27,16 @@ from .common.review import (
 )
 from .metrics.tracks import get_track
 
-# Baseline statistics calibrated strictly on DEV split
-CAM_DEV_THRESHOLDS = {
-    "cam_A": {"blur_thr": 250.0},  # Dev clean median ~870, p25 ~453, blur corrupted < 15
-    "cam_B": {"blur_thr": 100.0},  # Dev clean median ~235, p25 ~135, blur corrupted < 10
+# =============================================================================
+# Calibrated Baseline Statistics (Strictly computed on DEV split)
+# =============================================================================
+CALIBRATION_DEV = {
+    ("cam_A", "day"): {"lap_thr": 250.0, "block_med": 1.08, "sat_thr": 150},
+    ("cam_A", "dusk"): {"lap_thr": 200.0, "block_med": 1.24, "sat_thr": 120},
+    ("cam_A", "night"): {"lap_thr": 180.0, "block_med": 1.10, "sat_thr": 220},
+    ("cam_B", "day"): {"lap_thr": 90.0, "block_med": 1.08, "sat_thr": 120},
+    ("cam_B", "dusk"): {"lap_thr": 70.0, "block_med": 1.30, "sat_thr": 100},
+    ("cam_B", "night"): {"lap_thr": 100.0, "block_med": 1.00, "sat_thr": 200},
 }
 
 
@@ -56,11 +61,12 @@ def load(ctx: RunContext) -> dict:
 
 # ---------------------------------------------------------------- 02 process
 def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[dict]]]:
-    """Multi-feature anomaly scoring with camera normalization, 2D blockiness & local glare ROI."""
+    """RAM-QC Engine: Multi-defect scoring with ROI spatial weighting & slice normalization."""
     df = data["images"].copy()
     scores = []
     defect_types = []
     actions = []
+    triage_tiers = []
     reasons = []
     boxes_by_item: dict[str, list[dict]] = {}
 
@@ -68,39 +74,51 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
         img_path = ctx.input_dir / row["path"]
         img = load_rgb(img_path)
         gray = to_gray(img)
+        H, W = gray.shape
         cam = row.get("camera_id", "cam_A")
+        light = row.get("light", "day")
 
-        # 1. Cảm biến MỜ chuẩn hóa theo Camera (chọn ngưỡng trên DEV)
+        calib = CALIBRATION_DEV.get((cam, light), {"lap_thr": 150.0, "block_med": 1.1, "sat_thr": 150})
+
+        # 1. Cảm biến MỜ (Blur): chuẩn hóa theo median DEV của (camera, light)
         lap = laplacian_variance(img)
-        thr_blur = CAM_DEV_THRESHOLDS.get(cam, {}).get("blur_thr", 180.0)
-        s_blur = (thr_blur - lap) / thr_blur if lap < thr_blur else 0.0
+        s_blur = max(0.0, (calib["lap_thr"] - lap) / calib["lap_thr"]) if lap < calib["lap_thr"] else 0.0
 
-        # 2. Cảm biến TỐI (phân biệt ảnh đêm sạch p95 > 100 vs tối hỏng p95 < 65, mean < 25)
+        # 2. Cảm biến TỐI (Dark): phân biệt ảnh đêm bình thường (P95 > 100) vs tối đen (P95 < 65)
         stats = brightness_stats(img)
         p95 = stats["p95"]
         mean_val = stats["mean"]
-        s_dark = (65.0 - p95) / 65.0 if (p95 < 65.0 and mean_val < 25.0) else 0.0
+        s_dark = max(0.0, (65.0 - p95) / 65.0) if (p95 < 65.0 and mean_val < 25.0) else 0.0
 
-        # 3. Cảm biến LÓA CỤC BỘ (Local Glare) + Trích xuất Bounding Box
+        # 3. Cảm biến LÓA CÓ TRỌNG SỐ ROI (ROI-aware Glare):
+        # Trọng số: Bầu trời (y < 0.35H) ít nguy hiểm (W=0.35); Lòng đường/xe/người đi bộ (y >= 0.35H) chí mạng (W=1.85)
         sat_mask = (gray > 240).astype(np.uint8)
         cnts, _ = cv2.findContours(sat_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        s_glare = 0.0
         glare_boxes = []
-        max_glare_area = 0
+
         for c in cnts:
             x, y, w, h = cv2.boundingRect(c)
             area = w * h
-            if area >= 200:  # Cụm cháy sáng lớn
-                glare_boxes.append({"x": x, "y": y, "w": w, "h": h, "label": "glare", "color": "yellow"})
-                if area > max_glare_area:
-                    max_glare_area = area
+            cy = y + h / 2.0
+            w_roi = 0.35 if cy < 0.35 * H else 1.85
+            if area >= 20:  # phát hiện được cả lóa nhỏ
+                glare_impact = (area / 350.0) * w_roi
+                if glare_impact > s_glare:
+                    s_glare = glare_impact
+                if area >= 120 or (area >= 35 and w_roi > 1.0):
+                    glare_boxes.append({"x": x, "y": y, "w": w, "h": h, "label": "glare", "color": "yellow"})
+
+        # Điều chỉnh ban đêm: đèn xe/đèn đường tự nhiên có pixel bão hòa nhưng diện tích nhỏ
+        if light == "night" and sat_mask.sum() < calib["sat_thr"]:
+            s_glare = 0.0
+            glare_boxes = []
 
         if glare_boxes:
             boxes_by_item[row["image_id"]] = glare_boxes
-            s_glare = max_glare_area / 500.0  # Điểm tỉ lệ thuận với độ lớn vùng cháy sáng
-        else:
-            s_glare = 0.0
 
-        # 4. Cảm biến NÉN VỠ 2D (Bắt buộc cả H và V cùng đứt gãy để loại trừ texture 1 chiều)
+        # 4. Cảm biến NÉN VỠ HÌNH 2D (JPEG Compression):
+        # Bắt buộc cả H và V cùng đứt gãy để loại trừ texture sọc 1 chiều
         diff_h = np.abs(gray[:, 7:-1:8] - gray[:, 8::8]).mean()
         diff_hi = np.abs(gray[:, 3:-1:8] - gray[:, 4::8]).mean()
         diff_v = np.abs(gray[7:-1:8, :] - gray[8::8, :]).mean()
@@ -108,40 +126,52 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
         block_h = diff_h / (diff_hi + 1e-5)
         block_v = diff_v / (diff_vi + 1e-5)
         block_min = min(block_h, block_v)
-        s_comp = (block_min - 1.8) / 1.5 if block_min > 1.8 else 0.0
+        s_comp = max(0.0, (block_min - 1.8 * calib["block_med"]) / 1.5)
 
-        # 5. Tổng hợp điểm & Phá hòa điểm (Tie-breaking)
-        comp_scores = {
-            "blur": max(0.0, s_blur),
-            "dark": max(0.0, s_dark),
-            "glare": max(0.0, s_glare),
-            "compression": max(0.0, s_comp),
+        # 5. Công thức gộp điểm nhiều lỗi: Score = max(s_i) + 0.05 * sum(others)
+        sensor_scores = {
+            "blur": s_blur,
+            "dark": s_dark,
+            "glare": s_glare,
+            "compression": s_comp,
         }
-        best_defect = max(comp_scores, key=comp_scores.get)
-        raw_score = comp_scores[best_defect]
+        best_defect = max(sensor_scores, key=sensor_scores.get)
+        max_s = sensor_scores[best_defect]
+        other_sum = sum(v for k, v in sensor_scores.items() if k != best_defect)
 
-        # Micro tie-breaker: không có 2 ảnh nào bằng điểm nhau
+        # Micro tie-breaker để mọi ảnh đều có rank riêng biệt
         tie_breaker = (
             (1.0 / (lap + 1.0)) * 1e-4 +
             (1.0 / (mean_val + 1.0)) * 1e-4 +
             stats["frac_saturated"] * 1e-3 +
             block_min * 1e-4
         )
-        final_score = raw_score + tie_breaker if raw_score > 0.02 else tie_breaker
+        final_score = round(float(max_s + 0.05 * other_sum + tie_breaker), 6)
 
-        scores.append(round(float(final_score), 6))
-        if raw_score > 0.15:
-            defect_types.append(best_defect)
-            actions.append("RECAPTURE")
-            reasons.append(f"{best_defect} (score={final_score:.3f})")
+        # 6. Lọc 3 tầng (3-tier triage)
+        if final_score >= 0.85:
+            tier = "auto-RECAPTURE"
+            action = "RECAPTURE"
+        elif final_score >= 0.15:
+            tier = "REVIEW"
+            action = "RECAPTURE"  # đề xuất kiểm tra
         else:
-            defect_types.append("none")
-            actions.append("KEEP")
-            reasons.append("clean")
+            tier = "auto-KEEP"
+            action = "KEEP"
+
+        active_defects = [f"{k}({v:.2f})" for k, v in sensor_scores.items() if v > 0.10]
+        reason_str = " + ".join(active_defects) if active_defects else "clean"
+
+        scores.append(final_score)
+        defect_types.append(best_defect if max_s > 0.15 else "none")
+        actions.append(action)
+        triage_tiers.append(tier)
+        reasons.append(f"[{tier}] {reason_str}")
 
     df["score"] = scores
     df["pred_defect_type"] = defect_types
     df["suggested_action"] = actions
+    df["triage_tier"] = triage_tiers
     df["reason"] = reasons
     return df, boxes_by_item
 
@@ -204,7 +234,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
                 if dec == "reject":
                     val = override_val if override_val else "KEEP"
                     scored.at[i, "suggested_action"] = val
-                    scored.at[i, "score"] = 0.0001  # Hạ score xuống thấp vì người xác nhận không phải lỗi
+                    scored.at[i, "score"] = 0.0001
                     scored.at[i, "pred_defect_type"] = "none"
                     scored.at[i, "reason"] = f"rejected by {actor}: {note}" if note else f"rejected by {actor}"
                     ctx.audit.log(
@@ -250,24 +280,28 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
 
 # ---------------------------------------------------------------- 05 decide
 def decide(ctx: RunContext, final: pd.DataFrame) -> Decision:
-    """Cổng quyết định Risk Gate theo chuẩn Rubric: HOLD nếu chưa review, GO khi đã hoàn thành."""
-    owner = ctx.config.get("owner", "Hau Pham (ML Engineer)")
+    """Cổng quyết định Risk Gate theo chuẩn Rubric: Báo cáo đầy đủ 3 tầng triage."""
+    owner = ctx.config.get("owner", "Pham Duc Hau (lead)")
     n_items = len(final)
     n_reviewed = int(ctx.stats.get("n_reviewed", 0))
     budget = int(ctx.param("budget", 20))
     n_recapture = int((final["suggested_action"] == "RECAPTURE").sum())
     n_keep = n_items - n_recapture
+    n_auto_keep = int((final.get("triage_tier") == "auto-KEEP").sum())
+    n_auto_recapture = int((final.get("triage_tier") == "auto-RECAPTURE").sum())
 
     metrics = {
         "n_total_images": n_items,
         "n_recapture": n_recapture,
         "n_keep": n_keep,
+        "n_auto_keep": n_auto_keep,
+        "n_auto_recapture": n_auto_recapture,
         "review_budget": budget,
         "n_reviewed_by_human": n_reviewed,
         "review_completion_rate": round(n_reviewed / budget, 2) if budget else 0.0,
     }
 
-    # Nếu chưa có người review đủ budget: HOLD theo đúng quy chế kiểm toán
+    # Nếu chưa review đủ ngân sách: HOLD
     if n_reviewed < budget:
         return Decision(
             status="HOLD",
@@ -279,7 +313,7 @@ def decide(ctx: RunContext, final: pd.DataFrame) -> Decision:
             evidence=[str(ctx.out("review_queue.csv")), str(ctx.out("contact_sheet.html"))],
         )
 
-    # Đã hoàn tất review của con người: Cho phép xuất xưởng (GO)
+    # Đã hoàn tất review: GO
     return Decision(
         status="GO",
         reason_code="QC_TRIAGE_VERIFIED",
