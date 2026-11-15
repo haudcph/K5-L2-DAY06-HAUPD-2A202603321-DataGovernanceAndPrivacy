@@ -4,7 +4,7 @@ Architecture upgrades addressing presentation feedback:
 1. 3-Tier Triage Architecture: auto-KEEP (clean), REVIEW (uncertainty top-B), auto-RECAPTURE (severe corruption).
 2. Multi-defect scoring: score = max(s_i) + 0.05 * sum(others) + micro_tie_breaker.
 3. Rigorous Normalization per (camera_id, light) using DEV medians/IQR.
-4. Spatial ROI Prior for Glare: 1.85x weight on road/corridor corridor, 0.35x on sky/canopy.
+4. Spatial ROI Prior for Glare: 1.85x weight on road/corridor, 0.35x on sky/canopy.
 5. 2D Blockiness gradient: min(Block_H, Block_V) > 1.8 * base to eliminate 1D texture false alarms.
 """
 from __future__ import annotations
@@ -80,18 +80,18 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
 
         calib = CALIBRATION_DEV.get((cam, light), {"lap_thr": 150.0, "block_med": 1.1, "sat_thr": 150})
 
-        # 1. Cảm biến MỜ (Blur): chuẩn hóa theo median DEV của (camera, light)
+        # 1. Cảm biến MỜ (Blur): chuẩn hóa theo ngưỡng DEV của từng cặp (camera, light)
         lap = laplacian_variance(img)
         s_blur = max(0.0, (calib["lap_thr"] - lap) / calib["lap_thr"]) if lap < calib["lap_thr"] else 0.0
 
-        # 2. Cảm biến TỐI (Dark): phân biệt ảnh đêm bình thường (P95 > 100) vs tối đen (P95 < 65)
+        # 2. Cảm biến TỐI (Dark): phân biệt ảnh đêm bình thường (P95 > 100) với ảnh tối đen (P95 < 65)
         stats = brightness_stats(img)
         p95 = stats["p95"]
         mean_val = stats["mean"]
         s_dark = max(0.0, (65.0 - p95) / 65.0) if (p95 < 65.0 and mean_val < 25.0) else 0.0
 
         # 3. Cảm biến LÓA CÓ TRỌNG SỐ ROI (ROI-aware Glare):
-        # Trọng số: Bầu trời (y < 0.35H) ít nguy hiểm (W=0.35); Lòng đường/xe/người đi bộ (y >= 0.35H) chí mạng (W=1.85)
+        # Trọng số: Bầu trời (y < 0.35H) ít rủi ro (W=0.35); Lòng đường/xe/người đi bộ (y >= 0.35H) nghiêm trọng (W=1.85)
         sat_mask = (gray > 240).astype(np.uint8)
         cnts, _ = cv2.findContours(sat_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         s_glare = 0.0
@@ -102,14 +102,14 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
             area = w * h
             cy = y + h / 2.0
             w_roi = 0.35 if cy < 0.35 * H else 1.85
-            if area >= 20:  # phát hiện được cả lóa nhỏ
+            if area >= 20:  # Nhận diện được cả các vùng lóa diện tích nhỏ
                 glare_impact = (area / 350.0) * w_roi
                 if glare_impact > s_glare:
                     s_glare = glare_impact
                 if area >= 120 or (area >= 35 and w_roi > 1.0):
                     glare_boxes.append({"x": x, "y": y, "w": w, "h": h, "label": "glare", "color": "yellow"})
 
-        # Điều chỉnh ban đêm: đèn xe/đèn đường tự nhiên có pixel bão hòa nhưng diện tích nhỏ
+        # Điều chỉnh ban đêm: đèn xe/đèn đường tự nhiên có điểm ảnh bão hòa nhưng diện tích nhỏ
         if light == "night" and sat_mask.sum() < calib["sat_thr"]:
             s_glare = 0.0
             glare_boxes = []
@@ -118,7 +118,7 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
             boxes_by_item[row["image_id"]] = glare_boxes
 
         # 4. Cảm biến NÉN VỠ HÌNH 2D (JPEG Compression):
-        # Bắt buộc cả H và V cùng đứt gãy để loại trừ texture sọc 1 chiều
+        # Yêu cầu đứt gãy đồng thời cả chiều ngang (H) và dọc (V) để loại trừ nhiễu giả từ vân sọc 1 chiều
         diff_h = np.abs(gray[:, 7:-1:8] - gray[:, 8::8]).mean()
         diff_hi = np.abs(gray[:, 3:-1:8] - gray[:, 4::8]).mean()
         diff_v = np.abs(gray[7:-1:8, :] - gray[8::8, :]).mean()
@@ -128,7 +128,7 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
         block_min = min(block_h, block_v)
         s_comp = max(0.0, (block_min - 1.8 * calib["block_med"]) / 1.5)
 
-        # 5. Công thức gộp điểm nhiều lỗi: Score = max(s_i) + 0.05 * sum(others)
+        # 5. Công thức tổng hợp điểm đa lỗi: Score = max(s_i) + 0.05 * sum(others)
         sensor_scores = {
             "blur": s_blur,
             "dark": s_dark,
@@ -139,7 +139,7 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
         max_s = sensor_scores[best_defect]
         other_sum = sum(v for k, v in sensor_scores.items() if k != best_defect)
 
-        # Micro tie-breaker để mọi ảnh đều có rank riêng biệt
+        # Thành phần phân tách hạng vi mô (micro tie-breaker) giúp mỗi ảnh có thứ hạng duy nhất
         tie_breaker = (
             (1.0 / (lap + 1.0)) * 1e-4 +
             (1.0 / (mean_val + 1.0)) * 1e-4 +
@@ -148,13 +148,13 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
         )
         final_score = round(float(max_s + 0.05 * other_sum + tie_breaker), 6)
 
-        # 6. Lọc 3 tầng (3-tier triage)
+        # 6. Phân tầng sàng lọc 3 cấp (3-tier triage)
         if final_score >= 0.85:
             tier = "auto-RECAPTURE"
             action = "RECAPTURE"
         elif final_score >= 0.15:
             tier = "REVIEW"
-            action = "RECAPTURE"  # đề xuất kiểm tra
+            action = "RECAPTURE"  # Đề xuất đưa vào diện kiểm tra
         else:
             tier = "auto-KEEP"
             action = "KEEP"
@@ -178,11 +178,11 @@ def process(ctx: RunContext, data: dict) -> tuple[pd.DataFrame, dict[str, list[d
 
 # ---------------------------------------------------------------- 03 rank
 def rank(ctx: RunContext, scored: pd.DataFrame, boxes_by_item: dict[str, list[dict]]) -> pd.DataFrame:
-    """Tách queue tập trung 100% budget B=20 cho EVAL split, kèm Bounding Box cho Contact sheet."""
+    """Tạo hàng đợi tập trung 100% ngân sách B=20 cho tập EVAL, kèm khung BBox cho Contact sheet."""
     budget = int(ctx.param("budget", 20))
     target_split = ctx.config.get("target_split", "eval")
 
-    # Ưu tiên đưa các ảnh thuộc eval vào review queue để tối đa hóa ngân sách chấm điểm
+    # Ưu tiên lọc các ảnh thuộc tập eval vào hàng đợi duyệt để tối ưu ngân sách chấm điểm
     eval_candidates = scored[scored["split"] == target_split] if "split" in scored.columns else scored
 
     q = make_review_queue(
@@ -197,7 +197,7 @@ def rank(ctx: RunContext, scored: pd.DataFrame, boxes_by_item: dict[str, list[di
     )
     write_review_queue(q, ctx.out("review_queue.csv"))
 
-    # Render giao diện web offline có đóng khung BBox cho glare
+    # Xuất giao diện web offline hiển thị khung BBox cho các vùng lóa (glare)
     render_contact_sheet(
         q,
         ctx.out("contact_sheet.html"),
@@ -210,7 +210,7 @@ def rank(ctx: RunContext, scored: pd.DataFrame, boxes_by_item: dict[str, list[di
 
 # ---------------------------------------------------------------- 04 review
 def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.DataFrame:
-    """Human-in-the-loop: Đọc quyết định của reviewer và áp dụng override thông minh."""
+    """Human-in-the-loop: Đọc kết quả thẩm định từ người duyệt và áp dụng ghi đè (override) thông minh."""
     reviewed_path = ctx.output_dir / "review_queue_reviewed.csv"
     if reviewed_path.exists():
         reviewed = load_review_decisions(reviewed_path)
@@ -230,7 +230,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
                 before_action = scored.at[i, "suggested_action"]
                 before_score = scored.at[i, "score"]
 
-                # 1. REJECT: Reviewer bác bỏ đề xuất lỗi -> chuyển thành KEEP và hạ score
+                # 1. REJECT: Người duyệt bác bỏ cảnh báo lỗi -> chuyển thành KEEP và hạ điểm số
                 if dec == "reject":
                     val = override_val if override_val else "KEEP"
                     scored.at[i, "suggested_action"] = val
@@ -246,7 +246,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
                         reason=note or "Reviewer rejected defect prediction",
                     )
 
-                # 2. APPROVE: Reviewer xác nhận ảnh bị lỗi đúng như máy dự đoán
+                # 2. APPROVE: Người duyệt xác nhận ảnh bị lỗi đúng như hệ thống dự đoán
                 elif dec == "approve":
                     val = override_val if override_val else "RECAPTURE"
                     scored.at[i, "suggested_action"] = val
@@ -259,7 +259,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
                         reason=note or "Reviewer confirmed defect",
                     )
 
-                # 3. EDIT: Sửa hành động hoặc loại lỗi theo ghi chú
+                # 3. EDIT: Điều chỉnh hành động hoặc phân loại lỗi theo ghi chú thẩm định
                 elif dec == "edit":
                     val = override_val if override_val else (note.upper() if note.upper() in ["KEEP", "RECAPTURE"] else before_action)
                     scored.at[i, "suggested_action"] = val
@@ -301,7 +301,7 @@ def decide(ctx: RunContext, final: pd.DataFrame) -> Decision:
         "review_completion_rate": round(n_reviewed / budget, 2) if budget else 0.0,
     }
 
-    # Nếu chưa review đủ ngân sách: HOLD
+    # Nếu chưa duyệt đủ hạn mức ngân sách: HOLD
     if n_reviewed < budget:
         return Decision(
             status="HOLD",
@@ -313,7 +313,7 @@ def decide(ctx: RunContext, final: pd.DataFrame) -> Decision:
             evidence=[str(ctx.out("review_queue.csv")), str(ctx.out("contact_sheet.html"))],
         )
 
-    # Đã hoàn tất review: GO
+    # Đã hoàn tất quy trình duyệt: GO
     return Decision(
         status="GO",
         reason_code="QC_TRIAGE_VERIFIED",
