@@ -1,6 +1,6 @@
 member,git_author_name,git_email,role,modules_files,commit_shas,evidence_note,presenter
-Member 1,,,Lead / Integrator,src/main.py; configs/,,,
-Member 2,,,Data & fixtures,fixtures/; tools/,,,
-Member 3,,,Core algorithm,src/pipeline.py,,,
-Member 4,,,QA / metric,tests/; reports/metrics_*.json,,,
-Member 5,,,Human review + report,reports/group_report.md; demo/,,,
+Phạm Đức Hậu (2A202603321),Aceds .,haupdgch21032@fpt.edu.vn,Trưởng nhóm (Lead / Integrator),src/pipeline.py; src/main.py; configs/lab.yaml; Makefile,252e078; 7c9ccf2,Thiết kế kiến trúc RAM-QC 3 tầng lọc và công thức gộp đa lỗi,yes
+Trần Khánh Chi (2A202603338),Tran Khanh Chi,chi.tk2a@utc.edu.vn,Phụ trách dữ liệu (Data & Calibration),fixtures/t02_raw_qc/; configs/tracks/t02.yaml; tools/,252e078; 815c7c4,Kiểm toán SHA256 manifest và trích xuất bảng chuẩn hóa dev CALIBRATION_DEV,yes
+Khưu Minh Phú (2A202603337),Khuu Minh Phu,phu.km2a@utc.edu.vn,Phụ trách xử lý (Core Algorithm),src/pipeline.py; src/common/image_ops.py,252e078; HEAD,Cài đặt thuật toán nén 2D và cảm biến ROI Glare trọng số không gian,yes
+Nguyễn Tuấn Dũng (2A202603345),Nguyen Tuan Dung,dung.nt2a@utc.edu.vn,Người duyệt (Human Reviewer),out/poc/review_queue_reviewed.csv; out/poc/audit_log.jsonl,c34b102; 7c9ccf2,Thẩm duyệt 20 ảnh review queue trên web UI và áp dụng override có audit log,yes
+Nguyễn Phương Nga (2A202603335),Nguyen Phuong Nga,nga.np2a@utc.edu.vn,Phụ trách kiểm tra & Ca khó (QA / Evaluator & Report),tests/; reports/group_report.md; demo/slides.html,252e078; HEAD,Kiểm thử đơn vị ca khó lóa nhỏ đối chiếu Wilson CI và hoàn thiện báo cáo nhóm,yes

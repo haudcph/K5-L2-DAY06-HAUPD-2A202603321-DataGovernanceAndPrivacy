@@ -1,2 +1,11 @@
 ts,scope,status,canonical,reason_code,reason,owner,evidence
 2026-11-14T08:58:13+00:00,t02,GO,GO,QC_TRIAGE_COMPLIANT,"Đã phân loại thành công 96 ảnh: 41 ảnh nghi lỗi RECAPTURE, còn lại KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv
+2026-11-14T09:11:27+00:00,t02,GO,GO,QC_TRIAGE_COMPLIANT,"Đã phân loại thành công 96 ảnh: 41 ảnh nghi lỗi RECAPTURE, còn lại KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv
+2026-11-14T09:29:06+00:00,t02,GO,GO,QC_TRIAGE_COMPLIANT,"Đã phân loại thành công 96 ảnh: 41 ảnh nghi lỗi RECAPTURE, còn lại KEEP.",Tran Khánh chi (reviewer),out/poc/ranked_review.csv;out/poc/review_queue.csv
+2026-11-14T09:49:47+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 36 RECAPTURE, 60 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl
+2026-11-14T10:05:59+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 36 RECAPTURE, 60 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl
+2026-11-14T10:09:36+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 34 RECAPTURE, 62 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl
+2026-11-14T10:11:31+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 34 RECAPTURE, 62 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl
+2026-11-14T10:36:28+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 34 RECAPTURE, 62 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl
+2026-11-15T02:52:22+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 67 RECAPTURE, 29 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl
+2026-11-15T02:58:18+00:00,t02,GO,GO,QC_TRIAGE_VERIFIED,"Đã hoàn thành kiểm toán người duyệt (20/20 ảnh). Tổng 96 ảnh: 67 RECAPTURE, 29 KEEP.",Pham Duc Hau (lead),out/poc/ranked_review.csv;out/poc/review_queue.csv;out/poc/audit_log.jsonl

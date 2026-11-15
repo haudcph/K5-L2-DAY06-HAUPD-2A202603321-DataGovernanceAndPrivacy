@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 06 · Demo T02 Raw QC Triage (5 Phút) · Nhóm G07</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #0d9488;
+      --primary-dark: #0f766e;
+      --primary-light: #ccfbf1;
+      --accent: #f59e0b;
+      --accent-light: #fef3c7;
+      --border: #e2e8f0;
+      --code-bg: #1e293b;
+      --code-text: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 15px;
+      overflow-x: hidden;
+    }
+
+    .deck-container {
+      width: 100%;
+      max-width: 1050px;
+      aspect-ratio: 16 / 9;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      padding: 30px 42px;
+      opacity: 0;
+      transition: opacity 0.25s ease-in-out;
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    /* Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-tag {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    .timer-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: #b45309;
+      background: #fef3c7;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .role-badge {
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      background: #e2e8f0;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    h2 {
+      font-size: 24px;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    p.subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* Grid Layouts */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .content-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content-box.highlight {
+      background: #f0fdfa;
+      border-color: #99f6e4;
+    }
+
+    .content-box h3 {
+      font-size: 14.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    ul.bullet-list {
+      list-style: none;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+
+    ul.bullet-list li {
+      margin-bottom: 6px;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    ul.bullet-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    /* 4 Sensors Grid (Slide Model) */
+    .sensors-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .sensor-card {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sensor-card.blur-card { border-left: 4px solid #0284c7; }
+    .sensor-card.dark-card { border-left: 4px solid #64748b; }
+    .sensor-card.glare-card { border-left: 4px solid #f59e0b; }
+    .sensor-card.comp-card { border-left: 4px solid #8b5cf6; }
+
+    .sensor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3px;
+    }
+
+    .sensor-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .sensor-math {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #0f172a;
+      margin-top: 3px;
+    }
+
+    .sensor-note {
+      font-size: 11.5px;
+      color: #64748b;
+      margin-top: 3px;
+    }
+
+    .agg-bar {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .terminal-box {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: auto;
+    }
+
+    .terminal-box span.prompt { color: #38bdf8; }
+    .terminal-box span.comment { color: #94a3b8; }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+      background: #fdfdfd;
+      border-top: 1px solid var(--border);
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .nav-btn {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      font-size: 12.5px;
+    }
+
+    .nav-btn:hover {
+      background: #f1f5f9;
+      color: var(--text);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+    .pill-keep { background: #dcfce7; color: #166534; }
+    .pill-recapture { background: #fee2e2; color: #991b1b; }
+    .pill-hold { background: #fef3c7; color: #92400e; }
+    .pill-go { background: #ccfbf1; color: #115e59; }
+
+    /* Title Slide */
+    .title-slide {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .title-slide h1 {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 860px;
+      margin-top: 14px;
+    }
+
+    .roster-item {
+      background: #f8fafc;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .roster-item .role {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .roster-item .name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #eff6ff;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="deck-container">
+
+  <!-- SLIDE 0: TITLE & ROSTER (0:00 - 0:30) -->
+  <div class="slide active title-slide">
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <span class="step-tag">Day 06 · Field-to-Release PoC</span>
+      <span class="timer-badge">⏱️ Tổng thời lượng: 5 Phút</span>
+      <span class="role-badge">Track T02 · Raw QC Triage</span>
+    </div>
+    <h1>Trình Diễn Live Demo 6 Bước (5 Phút)</h1>
+    <p class="subtitle">Hệ Thống RAM-QC: Sàng Lọc & Kiểm Toán Dữ Liệu Camera (Human-in-the-Loop)</p>
+
+    <div class="roster-grid">
+      <div class="roster-item">
+        <div class="role">Trưởng nhóm (Lead / Integrator)</div>
+        <div class="name">Phạm Đức Hậu (2A202603321)</div>
+      </div>
+      <div class="roster-item">
+        <div class="role">Phụ trách Dữ liệu & Calibration</div>
+        <div class="name">Trần Khánh Chi (2A202603338)</div>
+      </div>
+      <div class="roster-item">
+        <div class="role">Phụ trách Xử lý / Core Algorithm</div>
+        <div class="name">Khưu Minh Phú (2A202603337)</div>
+      </div>
+      <div class="roster-item">
+        <div class="role">Người duyệt (Human Reviewer)</div>
+        <div class="name">Nguyễn Tuấn Dũng (2A202603345)</div>
+      </div>
+      <div class="roster-item" style="grid-column: span 2;">
+        <div class="role">Phụ trách Kiểm tra & Thử Ca khó (QA / Evaluator)</div>
+        <div class="name">Nguyễn Phương Nga (2A202603335)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 1: BƯỚC 01 (0:30 - 1:15) -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="header-left">
+        <span class="step-tag">Bước 01 · Nêu bài toán</span>
+        <span class="timer-badge">⏱️ 0:30 - 1:15 (45s)</span>
+      </div>
+      <span class="role-badge">Trình bày: Phạm Đức Hậu (Lead)</span>
+    </div>
+    <h2>Vấn Đề Kỹ Thuật & Mục Tiêu Xuất Xưởng</h2>
+    <p class="subtitle">"Nhóm làm Track T02 để giải quyết bài toán sàng lọc tự động ảnh camera hỏng trong xe tự hành..."</p>
+    
+    <div class="content-grid">
+      <div class="content-box">
+        <h3>🚨 Bối Cảnh & Điểm Nghẽn Chi Phí</h3>
+        <ul class="bullet-list">
+          <li><strong>Rủi ro xe tự hành:</strong> Ảnh mờ, lóa đèn, tối hầm, nén vỡ làm model AI nhận diện sai vật cản, gây nguy hiểm tính mạng.</li>
+          <li><strong>Ngân sách con người cố định:</strong> Không thể duyệt thủ công cả triệu ảnh. Chuyên viên bị giới hạn ở <strong>Budget B = 20 ảnh</strong> cho tập eval.</li>
+          <li><strong>Ai chịu hậu quả?</strong> Model thị giác máy tính bị sụt giảm độ chính xác khi thời tiết xấu.</li>
+        </ul>
+      </div>
+      <div class="content-box highlight">
+        <h3>🎯 Mục Tiêu & Cổng An Toàn (Risk Gate)</h3>
+        <ul class="bullet-list">
+          <li><strong>Primary Metric:</strong> Tối đa hóa <code>Defect Recall@20</code> trên tập <code>eval</code> (bắt trọn số ảnh lỗi trong 20 suất review).</li>
+          <li><strong>Hợp đồng đầu ra:</strong> File <code>ranked_review.csv</code>, giao diện web <code>contact_sheet.html</code>.</li>
+          <li><strong>Cổng an toàn (Risk Gate):</strong> Trạng thái <span class="pill pill-hold">HOLD</span> khi chưa duyệt đủ 20 ảnh, chỉ <span class="pill pill-go">GO</span> khi đã kiểm toán 100% minh bạch.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: BƯỚC 02 (1:15 - 1:50) -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="header-left">
+        <span class="step-tag">Bước 02 · Mở mẫu đầu vào</span>
+        <span class="timer-badge">⏱️ 1:15 - 1:50 (35s)</span>
+      </div>
+      <span class="role-badge">Trình bày: Trần Khánh Chi (Dữ liệu)</span>
+    </div>
+    <h2>Dữ Liệu Đầu Vào & Độ Toàn Vẹn Provenance</h2>
+    <p class="subtitle">Khảo sát mẫu ảnh cụ thể, metadata và kiểm tra tính bất biến SHA256.</p>
+
+    <div class="content-grid">
+      <div class="content-box">
+        <h3>📂 Bộ Dữ Liệu & Chia Tách Split</h3>
+        <ul class="bullet-list">
+          <li><strong>Quy mô:</strong> 96 ảnh synthetic 320×180 từ 24 cảnh thực địa (PII-free).</li>
+          <li><strong>Chia tách Scene-level:</strong> <code>dev</code> (56 ảnh - tune ngưỡng); <code>eval</code> (40 ảnh - heldout độc lập).</li>
+          <li><strong>Metadata:</strong> Cột <code>camera_id</code> (cam_A, cam_B), <code>light</code> (day, dusk, night).</li>
+        </ul>
+        <div class="terminal-box">
+          <span class="prompt">$</span> python -m tools.verify_manifests<br>
+          <span class="comment">OK fixtures/t02_raw_qc/manifest.csv (14 manifests, 0 failing)</span>
+        </div>
+      </div>
+      <div class="content-box highlight">
+        <h3>🔍 Mẫu Khảo Sát: <code>img_17_2.jpg</code></h3>
+        <ul class="bullet-list">
+          <li><strong>Lát cắt:</strong> Ban ngày (<code>light=day</code>), camera <code>cam_A</code>, tập <code>eval</code>.</li>
+          <li><strong>Hiện tượng:</strong> Nắng gắt chiếu trực tiếp gây <strong>Glare</strong> che khuất hoàn toàn biển số xe và làn đường.</li>
+          <li><strong>Yêu cầu hệ thống:</strong> Phải đóng khung Bounding Box vết lóa và xếp hạng ưu tiên Top 1 trong hàng đợi duyệt!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: KIẾN TRÚC RAM-QC & 5 CẢI TIẾN (1:50 - 2:50) -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="header-left">
+        <span class="step-tag">Bước 03 · Cơ chế Model</span>
+        <span class="timer-badge">⏱️ 1:50 - 2:50 (60s)</span>
+      </div>
+      <span class="role-badge">Trình bày: Khưu Minh Phú (Xử lý / Core)</span>
+    </div>
+    <h2>Kiến Trúc RAM-QC Giải Quyết 5 Điểm Phản Biện</h2>
+    <p class="subtitle">ROI-Adaptive Multi-Feature QC: Chuẩn hóa cảm biến + Trọng số không gian + Lọc 3 tầng</p>
+
+    <div class="sensors-grid">
+      <div class="sensor-card blur-card">
+        <div class="sensor-header">
+          <span class="sensor-name">🌫️ 1. Mờ (Slice Normalization)</span>
+          <span class="pill pill-recapture">Hạ ngưỡng cam_B</span>
+        </div>
+        <div class="sensor-math">cam_A: lap_thr=250 | cam_B: lap_thr=90</div>
+        <div class="sensor-note">cam_B quang học mềm tự nhiên (Laplacian dev ~235 so với cam_A ~955).</div>
+      </div>
+
+      <div class="sensor-card dark-card">
+        <div class="sensor-header">
+          <span class="sensor-name">🌑 2. Tối (Ngưỡng kép Night)</span>
+          <span class="pill pill-keep">Tránh nhầm Night</span>
+        </div>
+        <div class="sensor-math">P95 &lt; 65.0 VÀ mean &lt; 25.0</div>
+        <div class="sensor-note">Ảnh đêm sạch có đèn đường/đèn xe ($P_{95} > 100$) không bị phạt nhầm.</div>
+      </div>
+
+      <div class="sensor-card glare-card">
+        <div class="sensor-header">
+          <span class="sensor-name">☀️ 3. Lóa (Spatial ROI Prior)</span>
+          <span class="pill pill-recapture">W_ROI: Đường vs Trời</span>
+        </div>
+        <div class="sensor-math">Bầu trời: W=0.35 | Lòng đường: W=1.85</div>
+        <div class="sensor-note">Bắt lóa nhỏ $\ge 20$ px trên đường; lóa to ở bầu trời không bị phạt oan!</div>
+      </div>
+
+      <div class="sensor-card comp-card">
+        <div class="sensor-header">
+          <span class="sensor-name">🧱 4. Nén 2D (Blockiness Ratio)</span>
+          <span class="pill pill-keep">Gradient 2 chiều</span>
+        </div>
+        <div class="sensor-math">min(Block_H, Block_V) &gt; 1.8 * med</div>
+        <div class="sensor-note">Loại trừ hoàn toàn false alarm từ vân kẻ sọc 1 chiều của mặt đường.</div>
+      </div>
+    </div>
+
+    <div class="agg-bar">
+      <span><strong>Gộp đa lỗi:</strong> $Score = \max(s_i) + 0.05 \cdot \sum s_j + \delta_{\text{tie}}$</span>
+      <span style="color: #38bdf8;"><strong>Lọc 3 tầng:</strong> auto-KEEP (&lt;0.15) | REVIEW | auto-RECAPTURE (&ge;0.85)</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: BƯỚC 04 (2:50 - 3:35) -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="header-left">
+        <span class="step-tag">Bước 04 · Duyệt một mục</span>
+        <span class="timer-badge">⏱️ 2:50 - 3:35 (45s)</span>
+      </div>
+      <span class="role-badge">Trình bày: Nguyễn Tuấn Dũng (Reviewer)</span>
+    </div>
+    <h2>Vòng Lặp Con Người (Human-in-the-Loop)</h2>
+    <p class="subtitle">Trải nghiệm trên web Contact Sheet, thao tác override sửa sai cho máy tính.</p>
+
+    <div class="content-grid">
+      <div class="content-box">
+        <h3>🖥️ Trải Nghiệm Trên Contact Sheet HTML</h3>
+        <ul class="bullet-list">
+          <li>Hiển thị Top 20 ảnh nguy cơ cao nhất thuộc tập <code>eval</code>.</li>
+          <li>Ảnh bị lóa (như <code>img_17_2</code>) được <strong>đóng khung chữ nhật màu vàng</strong> trực quan quanh vùng chói.</li>
+          <li>Reviewer <strong>Nguyễn Tuấn Dũng</strong> thẩm định, chọn quyết định và ghi chú lý do.</li>
+        </ul>
+      </div>
+      <div class="content-box highlight">
+        <h3>🎯 Thao Tác Override Trên Mục <code>img_15_3</code></h3>
+        <ul class="bullet-list">
+          <li><strong>Máy đề xuất:</strong> <span class="pill pill-recapture">RECAPTURE</span> (Do điểm Laplacian hơi thấp lúc dusk).</li>
+          <li><strong>Reviewer phán đoán:</strong> Đường đi và xe cộ phía trước vẫn nhìn rất rõ ràng $\rightarrow$ Quyết định: <span class="pill pill-keep">REJECT</span> (Bác bỏ đề xuất lỗi, giữ lại ảnh).</li>
+          <li><strong>Ghi chú:</strong> Điền note <code>"Dark"</code> $\rightarrow$ Bấm <strong>Export decisions CSV</strong>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: BƯỚC 05 (3:35 - 4:20) -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="header-left">
+        <span class="step-tag">Bước 05 · Chạy lại, kiểm thay đổi</span>
+        <span class="timer-badge">⏱️ 3:35 - 4:20 (45s)</span>
+      </div>
+      <span class="role-badge">Trình bày: Phạm Đức Hậu & Nguyễn Phương Nga</span>
+    </div>
+    <h2>Áp Dụng Override & Nhật Ký Kiểm Toán Audit Log</h2>
+    <p class="subtitle">Chạy lại pipeline, đối chiếu vết thay đổi trước/sau và kích hoạt Cổng an toàn.</p>
+
+    <div class="content-grid">
+      <div class="content-box">
+        <h3>🔄 Đối Chiếu Trước & Sau Tại <code>img_15_3</code></h3>
+        <ul class="bullet-list">
+          <li><strong>Trước review:</strong> Action = <code>RECAPTURE</code>, Score = <code>0.8549</code>.</li>
+          <li><strong>Sau review:</strong> Action = <span class="pill pill-keep">KEEP</span>, Score = <code>0.0001</code> (hạ điểm an toàn).</li>
+          <li><strong>Nhật ký bất biến trong <code>audit_log.jsonl</code>:</strong>
+            <pre style="background:#e2e8f0; padding:6px; border-radius:4px; font-size:10.5px; margin-top:4px;">"action": "override:reject", "item_id": "img_15_3",
+"before": {"action": "RECAPTURE", "score": 0.8549},
+"after": {"action": "KEEP", "score": 0.0001},
+"reason": "Dark", "actor": "Nguyễn Tuấn Dũng"</pre>
+          </li>
+        </ul>
+      </div>
+      <div class="content-box highlight">
+        <h3>🛡️ Cổng An Toàn Tự Động Kích Hoạt (Risk Gate)</h3>
+        <ul class="bullet-list">
+          <li>File <code>decision.json</code> tự động chuyển trạng thái:</li>
+          <li>Từ <span class="pill pill-hold">HOLD</span> $\rightarrow$ Kích hoạt sang <span class="pill pill-go">GO</span> (khi đã duyệt 20/20 ảnh).</li>
+          <li><strong>Metrics kiểm toán:</strong> 67 RECAPTURE, 29 KEEP, 20/20 Reviewed (100%), Ký duyệt: <code>Pham Duc Hau (lead)</code>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: BƯỚC 06 (4:20 - 5:00) -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="header-left">
+        <span class="step-tag">Bước 06 · Hiệu quả & Giới hạn</span>
+        <span class="timer-badge">⏱️ 4:20 - 5:00 (40s)</span>
+      </div>
+      <span class="role-badge">Trình bày: Nguyễn Phương Nga (QA & Ca khó)</span>
+    </div>
+    <h2>Hiệu Quả Định Lượng & Hướng Phát Triển</h2>
+    <p class="subtitle">Bảng 1 so sánh Baseline vs PoC, phân tích độ bất định và phân tích ca khó.</p>
+
+    <div class="content-grid">
+      <div class="content-box">
+        <h3>📊 Hiệu Quả So Với Baseline (Tự Kiểm)</h3>
+        <ul class="bullet-list">
+          <li><span class="stat-badge">Defect Recall@20</span>: <strong>0.7727 vs 0.4545 (+70.0%)</strong> (95% CI: [0.565, 0.899]).</li>
+          <li><span class="stat-badge">Precision@20</span>: <strong>0.8500 vs 0.5000 (+70.0%)</strong> (17/20 ảnh đúng lỗi).</li>
+          <li><span class="stat-badge">False Alarm</span>: Dusk & Night <strong>giảm tuyệt đối về 0.0%</strong>.</li>
+          <li><strong>Tốc độ xử lý:</strong> ~8.5 ms/ảnh trên CPU offline.</li>
+        </ul>
+      </div>
+      <div class="content-box highlight">
+        <h3>⚠️ Phân Tích Ca Khó & Hướng Mở Rộng</h3>
+        <ul class="bullet-list">
+          <li><strong>Ca khó:</strong> Lóa nằm sát đường chân trời ($y \approx 0.35H$, ranh giới chuyển tiếp trọng số không gian) khiến máy tính phân vân giữa lóa trời và lóa đường.</li>
+          <li><strong>Khắc phục:</strong> Vòng lặp HITL hỗ trợ kịp thời qua tính năng EDIT.</li>
+          <li><strong>Mở rộng (Colab):</strong> Tích hợp deep learning Transformer MUSIQ / CLIP Zero-Shot IQA khi có GPU.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER CONTROLS -->
+  <div class="footer">
+    <button class="nav-btn" id="prevBtn" onclick="prevSlide()">◀ Trang trước</button>
+    <span id="slideIndicator" style="font-weight: 700; color: #1e293b;">Slide 1 / 7</span>
+    <button class="nav-btn" id="nextBtn" onclick="nextSlide()">Trang sau ▶</button>
+  </div>
+
+</div>
+
+<script>
+  let currentSlide = 0;
+  const slides = document.querySelectorAll('.slide');
+  const indicator = document.getElementById('slideIndicator');
+
+  function showSlide(index) {
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === index);
+    });
+    indicator.textContent = `Slide ${index + 1} / ${slides.length}`;
+  }
+
+  function nextSlide() {
+    if (currentSlide < slides.length - 1) {
+      currentSlide++;
+      showSlide(currentSlide);
+    }
+  }
+
+  function prevSlide() {
+    if (currentSlide > 0) {
+      currentSlide--;
+      showSlide(currentSlide);
+    }
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+    if (e.key === 'ArrowLeft') prevSlide();
+  });
+</script>
+
+</body>
+</html>

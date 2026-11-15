@@ -1,2 +1,3 @@
 ts,scope,status,canonical,reason_code,reason,owner,evidence
 2026-11-14T08:51:06+00:00,t02,HOLD,HOLD,BASELINE_ONLY,Random baseline: never release on this,Pham Duc Hau (lead),out/baseline/ranked_review.csv
+2026-11-15T02:54:15+00:00,t02,HOLD,HOLD,BASELINE_ONLY,Random baseline: never release on this,Pham Duc Hau (lead),out/baseline/ranked_review.csv
