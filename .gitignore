@@ -32,3 +32,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# Local offline wheel cache (large binaries, do not commit)
+wheelhouse/

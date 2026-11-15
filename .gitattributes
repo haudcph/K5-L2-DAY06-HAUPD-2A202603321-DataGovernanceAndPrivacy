@@ -1,0 +1,5 @@
+# Keep line endings stable across Windows/macOS/Linux teammates
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
